@@ -1,0 +1,47 @@
+Go2 Generics Overview
+
+Go! Academy
+21 November 2018
+
+Katarzyna Rybacka
+Software Engineer, Codilime
+katarzyna.rybacka@codilime.com
+Tags: TODO
+
+* Agenda
+
+1. Overview
+2. What we want from generics in Go / Goals
+3. The downsides of generics / Problem
+4. Examples of potential uses of generics in Go / Draft Design and Approaches
+5. Open questions
+
+* Overview
+** Approaches
+1. C approach - slow programmers
+2. C++ approach - slow compilation*
+3. Java approach - slow execution
+** Why does Go not have generic types now?
+
+* Goals
+** Generalized types
+- Do not require an explicit relationship between a definition of a generalized function and its use. The function should be callable with any suitable type.
+- Permit interfaces to express relationships between types of methods, as in a comparison function that takes two parameters of the same unknown type.
+- Given a generalized type, make it possible to use related types, such as a slice of that type.
+- Do not require explicit instantiation of generalized functions.
+- Permit type aliasing of generalized types.
+
+* Problems
+
+1. Generic Data Structures
+2. Generic Algorithms
+3. Functional Code
+4. Domain Modeling
+5. Language Extensions
+
+* Proposals
+
+1. Type functions (June 2010)
+2. Generalized types (March 2011)
+3. Generalized types (October 2013)
+4. Type parameters (December 2013)
