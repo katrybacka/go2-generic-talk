@@ -1,4 +1,4 @@
-Go2 Generics Overview
+Go2 Generics
 
 Go! Academy
 21 November 2018
@@ -6,42 +6,144 @@ Go! Academy
 Katarzyna Rybacka
 Software Engineer, Codilime
 katarzyna.rybacka@codilime.com
-Tags: TODO
+Tags: Go, generics
 
 * Agenda
 
-1. Overview
-2. What we want from generics in Go / Goals
-3. The downsides of generics / Problem
-4. Examples of potential uses of generics in Go / Draft Design and Approaches
+1. Why now? Introduction
+2. What we want from generics in Go?
+3. The downsides of generics
+4. Draft Design
 5. Open questions
 
-* Overview
-** Approaches
-1. C approach - slow programmers
-2. C++ approach - slow compilation*
-3. Java approach - slow execution
-** Why does Go not have generic types now?
+* Introduction
+
+* Approaches
+
+- C approach - slow programmers
+- C++ approach - slow compilation*
+- Java approach - slow execution
+
+* Why does Go not have generic types now?
 
 * Goals
-** Generalized types
-- Do not require an explicit relationship between a definition of a generalized function and its use. The function should be callable with any suitable type.
-- Permit interfaces to express relationships between types of methods, as in a comparison function that takes two parameters of the same unknown type.
-- Given a generalized type, make it possible to use related types, such as a slice of that type.
-- Do not require explicit instantiation of generalized functions.
-- Permit type aliasing of generalized types.
 
-* Problems
+* 
+- Fit smoothly into language
+- No awkward special cases
+- No exposing implementation details
+- Dual implementation
+: Polymorphism in Go should be implementable both at compile time (by repeated specialized compilation, as in C++) and at run time
+- Preserve straightforward and understandable style
+- As little added complexity as possible
 
-1. Generic Data Structures
-2. Generic Algorithms
-3. Functional Code
-4. Domain Modeling
-5. Language Extensions
+* Example
+
+    // Keys returns the keys from a map.
+    func Keys(m map[K]V) []K
+
+    // Uniq filters repeated elements from a channel,
+    // returning a channel of the filtered data.
+    func Uniq(<-chan T) <-chan T
+
+    // Merge merges all data received on any of the channels,
+    // returning a channel of the merged data.
+    func Merge(chans ...<-chan T) <-chan T
+
+    // SortSlice sorts a slice of data using the given comparison function.
+    func SortSlice(data []T, less func(x, y T) bool)
 
 * Proposals
 
-1. Type functions (June 2010)
-2. Generalized types (March 2011)
-3. Generalized types (October 2013)
-4. Type parameters (December 2013)
+* Type parameters
+
+    type List(type T) []T
+
+    func Keys(type K, V)(m map[K]V) []K
+
+Uses of a parameterized declaration supply the type arguments using ordinary call syntax:
+
+    var ints List(int)
+
+    keys := Keys(int, string)(map[int]string{1:"one", 2: "two"})
+
+: In general an implementation may need to constrain the possible types that can be used.
+: For example, we might want to define a Set(T), implemented as a list or map, in which case values of type T must be able to be compared for equality.
+: To express that, the draft design introduces the idea of a named contract.
+: A contract is like a function body illustrating the operations the type must support.
+: For example, to declare that values of type T must be comparable:
+
+* Contracts
+: https://twitter.com/rogpeppe/status/1036008488143646722 - considel adding Comparable contract
+
+    contract Addable(t T) {
+        t + t
+    }
+
+    // (type T Addable) is shorthand for (type T Addable(T))
+    func Sum(type T Addable)(x []T) T {
+        var total T
+        for _, v := range x {
+            total += v
+        }
+        return total
+    }
+
+
+* Draft Designs
+
+- Type functions
+- Generalized types
+- Generalized types
+- Type parameters
+
+* Problems
+
+* Issues
+
+- Generic Data Structures
+- Generic Algorithms
+- Functional Code
+- Domain Modeling
+- Language Extensions
+
+* Implied constraints.
+
+* Dual implementation
+
+    // A Set is a set of values of type T.
+    type Set(type T) ...
+
+    // Apply applies the function f to each value in the set s,
+    // returning a set of the results.
+    func (s Set(T)) Apply(type U)(f func(T) U) Set(U)  // NOT ALLOWED!
+
+    // OK
+    type List(type T) struct {
+        elem T
+        next *List(T)
+    }
+
+    // NOT OK - Implies an infinite sequence of types as you follow .next pointers.
+    type Infinite(type T) struct {
+        next *Infinite(Infinite(T))
+    }
+
+    // BigArray(T)(n) returns a nil n-dimensional slice of T.
+    // BigArray(int)(1) returns []int
+    // BigArray(int)(2) returns [][]int
+    // ...
+    func BigArray(type T)(n int) interface{} {
+        if n <= 1 || n >= 1000000000 {
+            return []T(nil)
+        }
+        return BigArray([]T)(n-1)
+    }
+
+* Contract bodies (like functions?) is a problem
+
+* Not discussed
+
+* Reference
+- https://dev.to/deanveloper/go-2-draft-generics-3333
+- https://go.googlesource.com/proposal/+/master/design/go2draft-generics-overview.md
