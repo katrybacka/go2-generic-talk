@@ -10,13 +10,25 @@ Tags: Go, generics
 
 * Agenda
 
-1. Why now? Introduction
-2. What we want from generics in Go?
-3. The downsides of generics
-4. Draft Design
-5. Open questions
+1. What's next? Go2 goals
+2. Generics. Why now?
+3. What we want from generics in Go?
+4. Draft Designs
+5. Possible problems
+6. Open questions
 
 * Introduction
+
+* Go2
+
+ - Error handling
+ - Error values
+ - Generics
+
+* Generics
+
+* "Generic programming is a style of computer programming in which algorithms are written in terms of types to-be-specified-later that are then instantiated when needed for specific types provided as parameters."
+* "Generalization based on type parameters was called parametric polymorphism."
 
 * Approaches
 
@@ -25,6 +37,9 @@ Tags: Go, generics
 - Java approach - slow execution
 
 * Why does Go not have generic types now?
+
+* "Instead of attempting Generics at the start, we spent our time on features more directly applicable to Go’s initial target of networked system software (now “cloud software”),
+such as concurrency, scalable builds, and low-latency garbage collection."
 
 * Goals
 
@@ -53,11 +68,15 @@ Tags: Go, generics
     // SortSlice sorts a slice of data using the given comparison function.
     func SortSlice(data []T, less func(x, y T) bool)
 
-* Proposals
+* Draft Designs
 
+- Type functions
+: Functions parameterized by types
+- Generalized types
+- Contracts
+- Type parameters
+: Types parameterized by types
 * Type parameters
-
-    type List(type T) []T
 
     func Keys(type K, V)(m map[K]V) []K
 
@@ -73,8 +92,26 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
 : A contract is like a function body illustrating the operations the type must support.
 : For example, to declare that values of type T must be comparable:
 
+* Generalized types
+
+    type List(type T) []T
+
+    type IndexedSet(type T) []T
+
 * Contracts
+* Take a look at parameterized structures
+
+    // T must satisfy the `Comparable` contract. This is shorthand for (type T Comparable(T))
+    type IndexedSet(type T Comparable) []T
+
+    contract Comparable(t T) {
+        t == t // assert that t must be able to use the `==` operator.
+    }
+
+
 : https://twitter.com/rogpeppe/status/1036008488143646722 - considel adding Comparable contract
+
+* But don't forget about functions..
 
     contract Addable(t T) {
         t + t
@@ -90,24 +127,23 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
     }
 
 
-* Draft Designs
-
-- Type functions
-- Generalized types
-- Generalized types
-- Type parameters
-
-* Problems
-
-* Issues
-
-- Generic Data Structures
-- Generic Algorithms
-- Functional Code
-- Domain Modeling
-- Language Extensions
+* Possible problems
 
 * Implied constraints.
+
+    // Maps must have the `==` operator defined on their keys.
+    // Then the question begs, should the following function compile properly?
+    // Or should we be required to make a contract for K?
+    func Keys(type K, V)(m map[K]V) []K
+
+    // alternatively...
+
+    contract Equal(t T) {
+        t == t
+    }
+
+    // Now, we apply the Equal contract to K
+    func Keys(type K, V Equal(K))(m map[K]V) []K
 
 * Dual implementation
 
@@ -124,6 +160,7 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
         next *List(T)
     }
 
+*
     // NOT OK - Implies an infinite sequence of types as you follow .next pointers.
     type Infinite(type T) struct {
         next *Infinite(Infinite(T))
@@ -140,9 +177,34 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
         return BigArray([]T)(n-1)
     }
 
-* Contract bodies (like functions?) is a problem
+* Contract bodies? Not so simple
 
-* Not discussed
+* This way..
+
+    contract C(t T) {
+        if t == t {
+            for i := 0; i < t; i++ {
+                t = t + t
+                t = t * t
+            }
+        }
+    }
+
+* Or maybe..
+
+    contract C(t T) {
+        t == t       // T is comparable
+        0 < t        // T is relational to integers
+        t = t + t    // T is assignable and has a + operator
+        t = t * t    // T is assignable and has a * operator
+    }
+
+* Syntax
+
+*
+    func (Receiver) FuncName(Generic Type List)(Argument List) (Return Value List)
+
+* Thanks! :)
 
 * Reference
 - https://dev.to/deanveloper/go-2-draft-generics-3333
