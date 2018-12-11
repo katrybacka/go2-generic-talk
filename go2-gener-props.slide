@@ -126,6 +126,15 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
         return total
     }
 
+* Multiple types
+More than one type parameter is also allowed in types, functions, and contracts.
+
+    contract Graph(n Node, e Edge) {
+        var edges []Edge = n.Edges()
+        var nodes []Node = e.Nodes()
+    }
+
+    func ShortestPath(type N, E Graph)(src, dst N) []E
 
 * Possible problems
 
