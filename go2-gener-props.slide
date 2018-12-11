@@ -153,6 +153,7 @@ More than one type parameter is also allowed in types, functions, and contracts.
 
     // Now, we apply the Equal contract to K
     func Keys(type K, V Equal(K))(m map[K]V) []K
+: It is unclear whether that precision about K should be required of the user or inferred from the use of map[K]V in the function signature.
 
 * Dual implementation
 
@@ -162,6 +163,10 @@ More than one type parameter is also allowed in types, functions, and contracts.
     // Apply applies the function f to each value in the set s,
     // returning a set of the results.
     func (s Set(T)) Apply(type U)(f func(T) U) Set(U)  // NOT ALLOWED!
+
+But this is allowed
+    func Apply(type T, U)(s Set(T), f func(T) U) Set(U)
+:
 
     // OK
     type List(type T) struct {
@@ -185,6 +190,7 @@ More than one type parameter is also allowed in types, functions, and contracts.
         }
         return BigArray([]T)(n-1)
     }
+: It is unclear what the algorithm is for deciding which programs to accept and which to reject.
 
 * Contract bodies? Not so simple
 
