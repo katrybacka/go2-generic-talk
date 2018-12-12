@@ -1,7 +1,7 @@
 Go2 Generics
 
 Go! Academy
-5 December 2018
+12 December 2018
 
 Katarzyna Rybacka
 Software Engineer, Codilime
@@ -67,12 +67,22 @@ Tags: Go, generics
 
 * Draft Designs
 
+- Generalized types
+: Types parameterized by types
 - Type functions
 : Functions parameterized by types
-- Generalized types
 - Contracts
-- Type parameters
-: Types parameterized by types
+
+
+* Generalized types
+New syntax:
+    type <list of type names>
+
+    type List(type T) []T
+
+    type IndexedSet(type T) []T
+
+
 * Type parameters
 
     type List(type T) []T
@@ -91,53 +101,6 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
 : A contract is like a function body illustrating the operations the type must support.
 : For example, to declare that values of type T must be comparable:
 
-* Generalized types
-New syntax:
-    type <list of type names>
-
-    type List(type T) []T
-
-    type IndexedSet(type T) []T
-
-What about conditions which should be satisfied?
-
-* Possible solution.. Contracts
-* Take a look at parameterized structure
-
-    // T must satisfy the `Comparable` contract. This is shorthand for (type T Comparable(T))
-    type IndexedSet(type T Comparable) []T
-
-    contract Comparable(t T) {
-        t == t // assert that t must be able to use the `==` operator.
-    }
-
-
-: https://twitter.com/rogpeppe/status/1036008488143646722 - considel adding Comparable contract
-
-* And parameterized function..
-
-    contract Addable(t T) {
-        t + t
-    }
-
-    // (type T Addable) is shorthand for (type T Addable(T))
-    func Sum(type T Addable)(x []T) T {
-        var total T
-        for _, v := range x {
-            total += v
-        }
-        return total
-    }
-
-* Multiple types
-More than one type parameter is also allowed in types, functions, and contracts.
-
-    contract Graph(n Node, e Edge) {
-        var edges []Edge = n.Edges()
-        var nodes []Node = e.Nodes()
-    }
-
-    func ShortestPath(type N, E Graph)(src, dst N) []E
 * Let's invoke this function
 
     var x []int
@@ -154,14 +117,102 @@ And maybe omit obvious stuff..
     var x []int
     total := Sum(x) // shorthand for Sum(int)(x)
 
+* What about conditions generic types should satisfy?
+
+* Possible solution.. Contracts
+* Take a look at parameterized structure
+
+    // T must satisfy the `Comparable` contract. This is shorthand for (type T Comparable(T))
+    type IndexedSet(type T Comparable) []T
+
+    contract Comparable(t T) {
+        t == t // assert that t must be able to use the `==` operator.
+    }
+
+
+: https://twitter.com/rogpeppe/status/1036008488143646722 - consider adding Comparable contract
+
+* And parameterized function..
+
+    // (type T Addable) is shorthand for (type T Addable(T))
+    func Sum(type T Addable)(x []T) T {
+        var total T
+        for _, v := range x {
+            total += v
+        }
+        return total
+    }
+
+    contract Addable(t T) {
+        t + t
+    }
+
+* Another one
+
+    func Stringify(type T)(s []T) (ret []string) {
+        for _, v := range s {
+            ret = append(ret, v.String())
+        }
+        return ret
+    }
+
+    contract stringer(x T) {
+        var s string = x.String()
+    }
+
+* Multiple types
+More than one type parameter is also allowed in types, functions, and contracts.
+
+    contract Graph(n Node, e Edge) {
+        var edges []Edge = n.Edges()
+        var nodes []Node = e.Nodes()
+    }
+
+    func ShortestPath(type N, E Graph)(src, dst N) []E
+
+* Passing explicit types to a contract
+
+    contract convertible(_ To, f From) {
+        To(f)
+    }
+
+Given this contract, we can write
+
+    func FormatUnsigned(type T convertible(uint64, T))(v T) string {
+        return strconv.FormatUint(uint64(v), 10)
+    }
+
+* The contract details
+
+Contracts may only appear at the top level of a package:
+- *contact* would be a keyword at the start of a top-level declaration, then normal identifier
+- after using *contact* it becomes a keyword for the duration of the package
+- *contract* would always be a keyword.
+
+Exported contracts: Just start it with upper-case letter
+
+* Contract embedding
+
+    contract PrintStringer(x X) {
+        stringer(X)
+        x.Print()
+    }
+
+This is roughly equivalent to
+
+    contract PrintStringer(x X) {
+        var s string = x.String()
+        x.Print()
+    }
+
 * Possible problems
 
 * Implied constraints.
-
-Should this code compile?
 : Maps must have the `==` operator defined on their keys.
 : Then the question begs, should the following function compile properly?
 : Or should we be required to make a contract for K?
+
+Should this code compile?
 
     func Keys(type K, V)(m map[K]V) []K
 
@@ -174,6 +225,7 @@ Or should it be done this way?
 
     // Now, we apply the Equal contract to K
     func Keys(type K, V Equal(K))(m map[K]V) []K
+
 : It is unclear whether that precision about K should be required of the user or inferred from the use of map[K]V in the function signature.
 
 * Dual implementation
@@ -184,11 +236,12 @@ Or should it be done this way?
     // Apply applies the function f to each value in the set s,
     // returning a set of the results.
     func (s Set(T)) Apply(type U)(f func(T) U) Set(U)  // NOT ALLOWED!
+
 : The problem here is that a value of type Set(int) would require an infinite number of Apply methods to be available at runtime
 
 But this is allowed
+
     func Apply(type T, U)(s Set(T), f func(T) U) Set(U)
-:
 
     // OK
     type List(type T) struct {
@@ -196,9 +249,10 @@ But this is allowed
         next *List(T)
     }
 
-*
-What's wrong here?
+* Which contract is wrong?
+
 : NOT OK - Implies an infinite sequence of types as you follow .next pointers.
+
     type AwesomeType(type T) struct {
         next *AwesomeType(AwesomeType(T))
     }
@@ -213,9 +267,10 @@ What's wrong here?
         }
         return BigArray([]T)(n-1)
     }
-: It is unclear what the algorithm is for deciding which programs to accept and which to reject.
 
+: It is unclear what the algorithm is for deciding which programs to accept and which to reject.
 : How decide which algorithm is good and which not
+
 * Contract bodies? Not so simple
 
 * This way..
@@ -238,11 +293,31 @@ What's wrong here?
         t = t * t    // T is assignable and has a * operator
     }
 
-* Syntax
+* What about interfaces?
+
+The interface method syntax is familiar. Writing contract bodies with x + x is ordinary Go syntax, but it is stylized, repetitive, and looks weird.
+
+How to represent operators using interface methods?
+
+    ==(T, T) bool
+
+Difficulties, not fatal problems.
+
+* Syntax could be a problem
 
     func (Receiver) FuncName(Generic Type List)(Argument List) (Return Value List)
 
+What about readability?
+
 * Summary
+
+- Most of Go programmers thinks that generics is needed
+- Stay compatible
+- Stay simple
+- Don't lose the spirit
+- So many *contracts* for contracts
+- Issue is still open
+- It could take a lot of time to generics to appear in Go,
 
 * Reference
 - https://dev.to/deanveloper/go-2-draft-generics-3333
