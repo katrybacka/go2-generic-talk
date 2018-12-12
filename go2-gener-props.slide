@@ -10,20 +10,19 @@ Tags: Go, generics
 
 * Agenda
 
-1. What's next? Go2 goals
-2. Generics. Why now?
-3. What we want from generics in Go?
-4. Draft Designs
-5. Possible problems
-6. Open questions
+- What's next? Go2 goals
+- Generics. Why now?
+- What we want from generics in Go?
+- Draft Designs
+- Possible problems
 
 * Introduction
 
 * Go2
 
- - Error handling
- - Error values
- - Generics
+- Error handling
+- Error values
+- Generics
 
 * Generics
 
@@ -38,12 +37,10 @@ Tags: Go, generics
 
 * Why does Go not have generic types now?
 
-* "Instead of attempting Generics at the start, we spent our time on features more directly applicable to Go’s initial target of networked system software (now “cloud software”),
-such as concurrency, scalable builds, and low-latency garbage collection."
+* "Instead of attempting Generics at the start, we spent our time on features more directly applicable to Go’s initial target of networked system software (now “cloud software”), such as concurrency, scalable builds, and low-latency garbage collection."
 
 * Goals
 
-* 
 - Fit smoothly into language
 - No awkward special cases
 - No exposing implementation details
@@ -52,7 +49,7 @@ such as concurrency, scalable builds, and low-latency garbage collection."
 - Preserve straightforward and understandable style
 - As little added complexity as possible
 
-* Example
+* Examples
 
     // Keys returns the keys from a map.
     func Keys(m map[K]V) []K
@@ -78,6 +75,8 @@ such as concurrency, scalable builds, and low-latency garbage collection."
 : Types parameterized by types
 * Type parameters
 
+    type List(type T) []T
+
     func Keys(type K, V)(m map[K]V) []K
 
 Uses of a parameterized declaration supply the type arguments using ordinary call syntax:
@@ -86,20 +85,24 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
 
     keys := Keys(int, string)(map[int]string{1:"one", 2: "two"})
 
-: In general an implementation may need to constrain the possible types that can be used.
+: In general an implementation may need to constraint the possible types that can be used.
 : For example, we might want to define a Set(T), implemented as a list or map, in which case values of type T must be able to be compared for equality.
 : To express that, the draft design introduces the idea of a named contract.
 : A contract is like a function body illustrating the operations the type must support.
 : For example, to declare that values of type T must be comparable:
 
 * Generalized types
+New syntax:
+    type <list of type names>
 
     type List(type T) []T
 
     type IndexedSet(type T) []T
 
-* Contracts
-* Take a look at parameterized structures
+What about conditions which should be satisfied?
+
+* Possible solution.. Contracts
+* Take a look at parameterized structure
 
     // T must satisfy the `Comparable` contract. This is shorthand for (type T Comparable(T))
     type IndexedSet(type T Comparable) []T
@@ -111,7 +114,7 @@ Uses of a parameterized declaration supply the type arguments using ordinary cal
 
 : https://twitter.com/rogpeppe/status/1036008488143646722 - considel adding Comparable contract
 
-* But don't forget about functions..
+* And parameterized function..
 
     contract Addable(t T) {
         t + t
@@ -135,18 +138,36 @@ More than one type parameter is also allowed in types, functions, and contracts.
     }
 
     func ShortestPath(type N, E Graph)(src, dst N) []E
+* Let's invoke this function
+
+    var x []int
+    total := Sum(int)(x)
+
+We assume that it could be splitted to..
+
+    var x []int
+    intSum := Sum(int) // intSum has type func([]int) int
+    total := intSum(x)
+
+And maybe omit obvious stuff..
+
+    var x []int
+    total := Sum(x) // shorthand for Sum(int)(x)
 
 * Possible problems
 
 * Implied constraints.
 
-    // Maps must have the `==` operator defined on their keys.
-    // Then the question begs, should the following function compile properly?
-    // Or should we be required to make a contract for K?
+Should this code compile?
+: Maps must have the `==` operator defined on their keys.
+: Then the question begs, should the following function compile properly?
+: Or should we be required to make a contract for K?
+
     func Keys(type K, V)(m map[K]V) []K
 
-    // alternatively...
+Or should it be done this way?
 
+    // alternatively...
     contract Equal(t T) {
         t == t
     }
@@ -158,11 +179,12 @@ More than one type parameter is also allowed in types, functions, and contracts.
 * Dual implementation
 
     // A Set is a set of values of type T.
-    type Set(type T) ...
+    type Set(type T Equal) []T
 
     // Apply applies the function f to each value in the set s,
     // returning a set of the results.
     func (s Set(T)) Apply(type U)(f func(T) U) Set(U)  // NOT ALLOWED!
+: The problem here is that a value of type Set(int) would require an infinite number of Apply methods to be available at runtime
 
 But this is allowed
     func Apply(type T, U)(s Set(T), f func(T) U) Set(U)
@@ -175,9 +197,10 @@ But this is allowed
     }
 
 *
-    // NOT OK - Implies an infinite sequence of types as you follow .next pointers.
-    type Infinite(type T) struct {
-        next *Infinite(Infinite(T))
+What's wrong here?
+: NOT OK - Implies an infinite sequence of types as you follow .next pointers.
+    type AwesomeType(type T) struct {
+        next *AwesomeType(AwesomeType(T))
     }
 
     // BigArray(T)(n) returns a nil n-dimensional slice of T.
@@ -192,6 +215,7 @@ But this is allowed
     }
 : It is unclear what the algorithm is for deciding which programs to accept and which to reject.
 
+: How decide which algorithm is good and which not
 * Contract bodies? Not so simple
 
 * This way..
@@ -216,10 +240,9 @@ But this is allowed
 
 * Syntax
 
-*
     func (Receiver) FuncName(Generic Type List)(Argument List) (Return Value List)
 
-* Thanks! :)
+* Summary
 
 * Reference
 - https://dev.to/deanveloper/go-2-draft-generics-3333
