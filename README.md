@@ -1,1 +1,1 @@
-# go2-generic-talk
+# go2-generics-talk
